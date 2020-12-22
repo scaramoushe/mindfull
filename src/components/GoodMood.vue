@@ -1,5 +1,45 @@
 <template>
 	<div class="good-mood">
+		<v-container class="grey lighten-5">
+			<v-row no-gutters>
+				<v-col
+					cols="12"
+					sm="6"
+				>
+					<v-card
+						class="pa-2"
+						outlined
+						tile
+					>
+						<v-slider
+							v-model="speed"
+							hint="speed"
+							max="4"
+							min="1"
+							step="0.1"
+						></v-slider>
+					</v-card>
+				</v-col>
+				<v-col
+					cols="12"
+					sm="6"
+				>
+					<v-card
+						class="pa-2"
+						outlined
+						tile
+					>
+						<v-slider
+							v-model="delay"
+							hint="interval"
+							max="3000"
+							step="100"
+							min="500"
+						></v-slider>
+					</v-card>
+				</v-col>
+			</v-row>
+		</v-container>
 		<v-stage ref="stage"  :config="configKonva" class="stage-1">
 			<v-layer ref="layer">
 			</v-layer>
@@ -8,10 +48,11 @@
 </template>
 
 <script lang="ts">
-import {Component, Prop, Vue} from 'vue-property-decorator';
+import {Component, Prop, Vue, Watch} from 'vue-property-decorator';
 import Konva from "konva";
 import Tools from "@/tools/Tools";
 import Words from "@/tools/Words";
+// import * as d3 from  "d3";
 
 @Component
 export default class GoodMood extends Vue {
@@ -29,13 +70,24 @@ export default class GoodMood extends Vue {
 		strokeWidth: 4
 	};
 
+	speed = 2;
+	delay = 1;
+
 	centerX:number = -1;
 
 	mounted(){
 		this.centerX = this.stageNode.getWidth() / 2;
 		this.configKonva.width = this.stageRef.$el.clientWidth;
 		this.configKonva.height = window.innerHeight - 100;
-		setInterval(() => this.runElement(),3000)
+		this.restart();
+	}
+
+	interval?:number = undefined;
+
+	@Watch("delay")
+	restart(){
+		if(this.interval) clearInterval(this.interval);
+		this.interval = setInterval(() => this.runElement(),this.delay)
 	}
 
 
@@ -75,7 +127,7 @@ export default class GoodMood extends Vue {
 			y: 120,
 			radiusX:100,
 			radiusY:30,
-			fill: '#00D2FF',
+			fill: Tools.randomColor(),
 			stroke: 'black',
 			strokeWidth: 4,
 		});
@@ -92,7 +144,9 @@ export default class GoodMood extends Vue {
 			align: 'center',
 			verticalAlign:"middle",
 		});
-		group.on("click", () => poly.setAttr("fill",alternateColor));
+		// group.on("click", () => poly.setAttr("fill",alternateColor));
+		group.on("dragstart", () => poly.setAttr("fill",alternateColor));
+		group.on("mousedown", () => poly.setAttr("fill",alternateColor));
 		group.add(poly,textBlock);
 		return group;
 	}
@@ -101,16 +155,16 @@ export default class GoodMood extends Vue {
 		const fig = Tools.randBool()? this.createFigure(Tools.randomArrayMember(Words.positive),0,"green"):this.createFigure(Tools.randomArrayMember(Words.negative),0,"red");
 		this.layer.add(fig);
 		const xMove = Math.random() - 0.5;
-		this.animate(fig,(x) => x + xMove,(y) => y - 1)
+		this.animate(fig,(x) => x + xMove * this.speed,(y) => y - this.speed)
 	}
 
-	elementClick(event:any){
-		const mousePos = this.stageNode.getPointerPosition();
-		const x = mousePos.x - 190;
-		const y = mousePos.y - 40;
-		console.log(event,'x: ' + x + ', y: ' + y);
-		this.animate(event.target,(x) => x + 1,(y) => y + 1);
-	}
+	// elementClick(event:any){
+	// 	const mousePos = this.stageNode.getPointerPosition();
+	// 	const x = mousePos.x - 190;
+	// 	const y = mousePos.y - 40;
+	// 	console.log(event,'x: ' + x + ', y: ' + y);
+	// 	this.animate(event.target,(x) => x + 1,(y) => y + 1);
+	// }
 
 	animate(el:any,moveX:(x:number,time:number) => number,moveY:(y:number,time:number) => number){
 		const anim = new Konva.Animation(function(frame:any) {
