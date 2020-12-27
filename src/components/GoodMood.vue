@@ -51,7 +51,7 @@
 import {Component, Prop, Vue, Watch} from 'vue-property-decorator';
 import Konva from "konva";
 import Tools from "@/tools/Tools";
-import Words from "@/tools/Words";
+// import Words from "@/tools/Words";
 // import * as d3 from  "d3";
 
 @Component
@@ -74,11 +74,26 @@ export default class GoodMood extends Vue {
 	delay = 1;
 
 	centerX:number = -1;
+	private remoteData: any;
 
-	mounted(){
+	async loadData(){
+		this.remoteData = await Tools.loadFromGD("https://spreadsheets.google.com/feeds/cells/1Hek33xszp0ceh41B1PN2ezuUt5jIC6jsr0QNVrXExZM/1/public/full?alt=json");
+		console.log(this.remoteData);
+	}
+
+	get positive(){
+		return this.remoteData.find((el) => el.name == "positive").data;
+	}
+
+	get negative(){
+		return this.remoteData.find((el) => el.name == "megative").data;
+	}
+
+	async mounted(){
 		this.centerX = this.stageNode.getWidth() / 2;
 		this.configKonva.width = this.stageRef.$el.clientWidth;
 		this.configKonva.height = window.innerHeight - 100;
+		await this.loadData();
 		this.restart();
 	}
 
@@ -93,6 +108,7 @@ export default class GoodMood extends Vue {
 
 	amplitude = 500;
 	period = 5000;
+	count = 0;
 
 	get stageRef(){
 		return (this.$refs.stage as any);
@@ -152,25 +168,21 @@ export default class GoodMood extends Vue {
 	}
 
 	runElement(){
-		const fig = Tools.randBool()? this.createFigure(Tools.randomArrayMember(Words.positive),0,"green"):this.createFigure(Tools.randomArrayMember(Words.negative),0,"red");
-		this.layer.add(fig);
-		const xMove = Math.random() - 0.5;
-		this.animate(fig,(x) => x + xMove * this.speed,(y) => y - this.speed)
+		if(this.count < 100) {
+			const fig = Tools.randBool() ? this.createFigure(Tools.randomArrayMember(this.positive), 0, "green") : this.createFigure(Tools.randomArrayMember(this.negative), 0, "red");
+			this.layer.add(fig);
+			const xMove = Math.random() - 0.5;
+			this.animate(fig, (x) => x + xMove * this.speed, (y) => y - this.speed)
+		}
 	}
 
-	// elementClick(event:any){
-	// 	const mousePos = this.stageNode.getPointerPosition();
-	// 	const x = mousePos.x - 190;
-	// 	const y = mousePos.y - 40;
-	// 	console.log(event,'x: ' + x + ', y: ' + y);
-	// 	this.animate(event.target,(x) => x + 1,(y) => y + 1);
-	// }
-
 	animate(el:any,moveX:(x:number,time:number) => number,moveY:(y:number,time:number) => number){
-		const anim = new Konva.Animation(function(frame:any) {
+		this.count++;
+		const anim = new Konva.Animation((frame:any) =>{
 			if(el.attrs.y < -200){
 				anim.stop();
 				el.remove();
+				this.count--;
 			}
 			el.setX(moveX(el.attrs.x,frame.timeDiff));
 			el.setY(moveY(el.attrs.y,frame.timeDiff));

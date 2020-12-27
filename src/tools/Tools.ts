@@ -1,4 +1,5 @@
 import _ from "lodash";
+const axios = require('axios').default;
 
 interface HslToRgbParams {
     h: any;
@@ -23,6 +24,20 @@ export default class Tools{
 
     static randomNumber(min:number,max:number){
         return min + Math.floor(Math.random() * (max - min));
+    }
+
+    static async loadFromGD(url:string){
+        const data = await axios.get(url);
+        const cells = data.data.feed.entry.map((x:any) => x.gs$cell);
+        // console.log(cells);
+        const cols = cells.filter((c:any) => c.row == 1);
+        // console.log(cols);
+        return cols.map((c:any) => {
+            return {
+                name:c.inputValue,
+                data:cells.filter((x:any) => x.row > 1 && x.col == c.col).map((x:any) => x.inputValue)
+            }
+        });
     }
 
     static randomColor = (() => {
